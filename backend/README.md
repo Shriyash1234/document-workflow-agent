@@ -1,6 +1,6 @@
 # Backend
 
-Node.js + TypeScript backend for the Nova trade document POC.
+Node.js + TypeScript backend for the agentic workflow POC.
 
 Planned responsibilities:
 

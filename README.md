@@ -193,9 +193,9 @@ Done:
 - Query Agent added for grounded natural-language questions over SQLite
 - React + Vite UI added for samples, uploads, pipeline results, decisions, and query
 
-Next:
+Submission guide:
 
-- Final end-to-end polish and submission docs
+- See [docs/SUBMISSION.md](docs/SUBMISSION.md) for the reviewer-facing demo script, deliverable mapping, architecture notes, and defense of the agent boundaries.
 
 ## Environment
 
