@@ -2,19 +2,13 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express, { type NextFunction, type Request, type Response } from "express";
 import morgan from "morgan";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { loadCustomerRules } from "./rules/customerRules.js";
+import { runSamplePipeline } from "./services/pipelineService.js";
+import { loadSamplesManifest } from "./services/sampleDocuments.js";
 import { getDatabaseStatus } from "./storage/database.js";
+import { getRun } from "./storage/runRepository.js";
 
 dotenv.config();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const backendRoot = path.resolve(__dirname, "..");
-const workspaceRoot = path.resolve(backendRoot, "..");
-const samplesManifestPath = path.join(workspaceRoot, "samples", "manifest.json");
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
@@ -36,8 +30,7 @@ app.get("/api/health", (_request: Request, response: Response) => {
 
 app.get("/api/samples", async (_request: Request, response: Response, next: NextFunction) => {
   try {
-    const manifestText = await readFile(samplesManifestPath, "utf8");
-    const manifest = JSON.parse(manifestText);
+    const manifest = await loadSamplesManifest();
 
     response.json({
       ok: true,
@@ -60,6 +53,45 @@ app.get("/api/rules/customer", async (_request: Request, response: Response, nex
   } catch (error) {
     next(error);
   }
+});
+
+app.post("/api/runs/sample", async (request: Request, response: Response, next: NextFunction) => {
+  try {
+    const samplePath = request.body?.samplePath;
+    if (typeof samplePath !== "string" || samplePath.trim().length === 0) {
+      response.status(400).json({
+        ok: false,
+        error: "samplePath is required.",
+      });
+      return;
+    }
+
+    const run = await runSamplePipeline(samplePath);
+
+    response.status(201).json({
+      ok: true,
+      run,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/runs/:id", (request: Request, response: Response) => {
+  const runId = Array.isArray(request.params.id) ? request.params.id[0] : request.params.id;
+  const run = getRun(runId);
+  if (!run) {
+    response.status(404).json({
+      ok: false,
+      error: "Run not found",
+    });
+    return;
+  }
+
+  response.json({
+    ok: true,
+    run,
+  });
 });
 
 app.use((_request: Request, response: Response) => {

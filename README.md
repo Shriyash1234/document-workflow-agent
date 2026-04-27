@@ -94,6 +94,8 @@ Available endpoints:
 GET /api/health
 GET /api/samples
 GET /api/rules/customer
+POST /api/runs/sample
+GET /api/runs/:id
 ```
 
 The backend initializes SQLite automatically on startup. By default the database is created at:
@@ -125,6 +127,14 @@ npm run route:fixture
 npm run route:fixture -- messy
 ```
 
+Run a real sample document through the full backend pipeline:
+
+```bash
+curl -X POST http://localhost:4000/api/runs/sample \
+  -H "Content-Type: application/json" \
+  -d "{\"samplePath\":\"clean/commercial-invoice.pdf\"}"
+```
+
 ## Current Status
 
 Done:
@@ -137,6 +147,7 @@ Done:
 - Extractor Agent added for Gemini-based PDF/image field extraction
 - Validator Agent added for deterministic field-by-field rule checks
 - Router Agent added for approve/review/amendment decisions
+- Sample pipeline endpoint added for Extractor -> Validator -> Router -> SQLite runs
 - Frontend folder reserved
 
 Next:
