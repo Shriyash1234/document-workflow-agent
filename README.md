@@ -129,6 +129,13 @@ npm run route:fixture
 npm run route:fixture -- messy
 ```
 
+Run the deterministic test suite:
+
+```bash
+cd backend
+npm test
+```
+
 Run a real sample document through the full backend pipeline:
 
 ```bash
@@ -196,6 +203,8 @@ Done:
 Submission guide:
 
 - See [docs/SUBMISSION.md](docs/SUBMISSION.md) for the reviewer-facing demo script, deliverable mapping, architecture notes, and defense of the agent boundaries.
+- See [docs/PRD.md](docs/PRD.md) for the product requirements write-up.
+- See [docs/TECHNICAL_WRITEUP.md](docs/TECHNICAL_WRITEUP.md) for the engineering write-up.
 
 ## Environment
 
