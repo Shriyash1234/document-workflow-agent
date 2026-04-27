@@ -4,8 +4,9 @@ import express, { type NextFunction, type Request, type Response } from "express
 import morgan from "morgan";
 import { QueryAgent } from "./agents/queryAgent.js";
 import { loadCustomerRules } from "./rules/customerRules.js";
-import { runSamplePipeline } from "./services/pipelineService.js";
+import { runDocumentPipeline, runSamplePipeline } from "./services/pipelineService.js";
 import { loadSamplesManifest } from "./services/sampleDocuments.js";
+import { uploadedFileToPipelineDocument, uploadDocument } from "./services/uploads.js";
 import { getDatabaseStatus } from "./storage/database.js";
 import { getRun } from "./storage/runRepository.js";
 
@@ -69,6 +70,27 @@ app.post("/api/runs/sample", async (request: Request, response: Response, next: 
     }
 
     const run = await runSamplePipeline(samplePath);
+
+    response.status(201).json({
+      ok: true,
+      run,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/runs", uploadDocument.single("document"), async (request: Request, response: Response, next: NextFunction) => {
+  try {
+    if (!request.file) {
+      response.status(400).json({
+        ok: false,
+        error: "document file is required.",
+      });
+      return;
+    }
+
+    const run = await runDocumentPipeline(uploadedFileToPipelineDocument(request.file), "upload");
 
     response.status(201).json({
       ok: true,

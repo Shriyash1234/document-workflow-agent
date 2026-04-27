@@ -94,6 +94,7 @@ Available endpoints:
 GET /api/health
 GET /api/samples
 GET /api/rules/customer
+POST /api/runs
 POST /api/runs/sample
 GET /api/runs/:id
 POST /api/query
@@ -134,6 +135,13 @@ Run a real sample document through the full backend pipeline:
 curl -X POST http://localhost:4000/api/runs/sample \
   -H "Content-Type: application/json" \
   -d "{\"samplePath\":\"clean/commercial-invoice.pdf\"}"
+```
+
+Upload a PDF or image through the full backend pipeline:
+
+```bash
+curl -X POST http://localhost:4000/api/runs \
+  -F "document=@../samples/clean/commercial-invoice.pdf"
 ```
 
 Ask a grounded question over stored runs:
