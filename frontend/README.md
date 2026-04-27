@@ -1,11 +1,22 @@
 # Frontend
 
-React + Vite frontend for the Nova trade document POC.
+React + Vite frontend for the agentic workflow POC.
 
-Planned responsibilities:
+## Run
 
-- run clean and messy sample documents
-- upload custom PDF/image documents
-- show extraction, validation, decision, and reasoning
-- ask basic natural-language questions over stored pipeline results
+```bash
+npm install
+npm run dev
+```
 
+The app runs on:
+
+```txt
+http://localhost:5173
+```
+
+The backend must be running on:
+
+```txt
+http://localhost:4000
+```

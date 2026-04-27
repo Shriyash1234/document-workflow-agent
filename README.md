@@ -154,6 +154,29 @@ curl -X POST http://localhost:4000/api/query \
 
 The query layer uses Gemini to generate read-only SQLite `SELECT` statements from a schema dictionary. The backend validates that SQL is single-statement and read-only before execution, then Gemini summarizes only from returned rows.
 
+## Frontend
+
+Install frontend dependencies:
+
+```bash
+cd frontend
+npm install
+```
+
+Run the frontend from the repo root:
+
+```bash
+npm run dev:frontend
+```
+
+Frontend URL:
+
+```txt
+http://localhost:5173
+```
+
+The UI can run clean/messy samples, upload a PDF/image, show extracted fields, validation results, routing decisions, amendment drafts, and ask grounded questions over stored outputs.
+
 ## Current Status
 
 Done:
@@ -168,11 +191,11 @@ Done:
 - Router Agent added for approve/review/amendment decisions
 - Sample pipeline endpoint added for Extractor -> Validator -> Router -> SQLite runs
 - Query Agent added for grounded natural-language questions over SQLite
-- Frontend folder reserved
+- React + Vite UI added for samples, uploads, pipeline results, decisions, and query
 
 Next:
 
-- Build the React + Vite UI
+- Final end-to-end polish and submission docs
 
 ## Environment
 
