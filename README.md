@@ -13,6 +13,65 @@ agentic-workflow/
   samples/   Synthetic clean and messy trade documents used for demos
 ```
 
+## Quick Start
+
+Requirements:
+
+- Node.js 22+
+- npm
+- Gemini API key
+
+Install dependencies:
+
+```bash
+cd backend
+npm install
+
+cd ../frontend
+npm install
+```
+
+Create backend environment:
+
+```bash
+cd ../backend
+copy .env.example .env
+```
+
+Set `GEMINI_API_KEY` in `backend/.env`.
+
+Start the backend from the repo root in one terminal:
+
+```bash
+npm run dev:backend
+```
+
+Start the frontend from the repo root in another terminal:
+
+```bash
+npm run dev:frontend
+```
+
+Open the app:
+
+```txt
+http://localhost:5173
+```
+
+The backend runs at:
+
+```txt
+http://localhost:4000
+```
+
+Recommended demo flow:
+
+1. Run `clean/commercial-invoice.pdf` from the UI.
+2. Confirm the extracted fields, validation matches, and `auto_approve` decision.
+3. Run `messy/commercial-invoice-messy.pdf`.
+4. Confirm mismatches/uncertain fields and the amendment or review decision.
+5. Ask: `how many shipments were flagged this week?`
+
 ## Sample Documents
 
 The repository already includes synthetic trade documents for testing the pipeline.
@@ -55,38 +114,7 @@ Upload document
   -> Query layer answers basic questions from stored data
 ```
 
-## Backend
-
-Install backend dependencies:
-
-```bash
-cd backend
-npm install
-```
-
-Create backend environment file:
-
-```bash
-copy .env.example .env
-```
-
-Then set:
-
-```env
-GEMINI_API_KEY=your_key_here
-```
-
-Run the backend from the repo root:
-
-```bash
-npm run dev:backend
-```
-
-Backend URL:
-
-```txt
-http://localhost:4000
-```
+## Backend API
 
 Available endpoints:
 
@@ -106,33 +134,15 @@ The backend initializes SQLite automatically on startup. By default the database
 backend/data/agentic-workflow.db
 ```
 
-Run the Extractor Agent against a sample document:
+Useful backend commands:
 
 ```bash
 cd backend
 npm run extract:sample -- ../samples/clean/commercial-invoice.pdf
-```
-
-Run the Validator Agent against deterministic fixtures:
-
-```bash
-cd backend
 npm run validate:fixture
 npm run validate:fixture -- messy
-```
-
-Run the Router Agent against deterministic fixtures:
-
-```bash
-cd backend
 npm run route:fixture
 npm run route:fixture -- messy
-```
-
-Run the deterministic test suite:
-
-```bash
-cd backend
 npm test
 ```
 
@@ -163,25 +173,6 @@ The query layer uses Gemini to generate read-only SQLite `SELECT` statements fro
 
 ## Frontend
 
-Install frontend dependencies:
-
-```bash
-cd frontend
-npm install
-```
-
-Run the frontend from the repo root:
-
-```bash
-npm run dev:frontend
-```
-
-Frontend URL:
-
-```txt
-http://localhost:5173
-```
-
 The UI can run clean/messy samples, upload a PDF/image, show extracted fields, validation results, routing decisions, amendment drafts, and ask grounded questions over stored outputs.
 
 ## Current Status
@@ -200,9 +191,8 @@ Done:
 - Query Agent added for grounded natural-language questions over SQLite
 - React + Vite UI added for samples, uploads, pipeline results, decisions, and query
 
-Submission guide:
+Deliverables:
 
-- See [docs/SUBMISSION.md](docs/SUBMISSION.md) for the reviewer-facing demo script, deliverable mapping, architecture notes, and defense of the agent boundaries.
 - See [docs/PRD.md](docs/PRD.md) for the product requirements write-up.
 - See [docs/TECHNICAL_WRITEUP.md](docs/TECHNICAL_WRITEUP.md) for the engineering write-up.
 

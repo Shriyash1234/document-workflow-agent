@@ -1,176 +1,178 @@
 # Technical Write-Up
 
-## Overview
+This write-up explains the engineering decisions behind the Part 1 POC: how data flows, where state lives, how the system fails safely, and what I would harden next.
 
-This POC implements an end-to-end trade document workflow using a small agentic backend and a minimal React frontend. The design goal is not maximum abstraction. The design goal is a reviewer-friendly system that shows where AI belongs, where deterministic logic belongs, and how the workflow stays auditable.
-
-## Architecture Diagram
+## 1. Architecture Diagram
 
 ```mermaid
 flowchart LR
-    A["PDF / Image Upload"] --> B["Extractor Agent<br/>Gemini multimodal JSON output"]
-    B --> C["Validator Agent<br/>deterministic rules"]
-    C --> D["Router Agent<br/>approve / review / amendment"]
-    D --> E["SQLite storage"]
-    E --> F["Run history API"]
-    E --> G["Query Agent<br/>LLM plans safe SQL"]
-    G --> H["Grounded answer"]
-    F --> I["React + Vite UI"]
-    H --> I
+    A["React + Vite UI<br/>sample run / upload / query"] --> B["Express API"]
+
+    B --> C["Run Repository<br/>SQLite state"]
+    C --> C1["runs"]
+    C --> C2["documents"]
+    C --> C3["extracted_fields"]
+    C --> C4["validation_results"]
+    C --> C5["decisions"]
+    C --> C6["query_history"]
+
+    B --> D["Pipeline Service<br/>custom orchestration"]
+    D --> E["Extractor Agent<br/>Gemini structured JSON"]
+    E --> F["Validator Agent<br/>deterministic customer rules"]
+    F --> G["Router Agent<br/>approve / review / amendment"]
+    G --> C
+
+    B --> H["Query Agent"]
+    H --> I["Gemini SQL planner"]
+    I --> J["SQL safety guard<br/>read-only allowlist"]
+    J --> C
+    C --> K["Grounded answer"]
+    K --> A
 ```
 
-## Implementation Summary
+State lives in SQLite. The important persisted records are the run status, document metadata, raw extraction JSON, normalized extracted fields, validation rows, router decision, amendment draft, and query history. The agents do not rely on hidden shared memory. They hand off typed JSON objects: `ExtractionResult` -> `ValidationSummary` -> `DecisionResult`.
 
-Backend:
+## 2. Three Nasty Failure Modes
 
-- Express API for health, sample listing, run execution, stored-run fetch, and natural-language query
-- Gemini integration through `@google/genai`
-- deterministic validation and routing
-- SQLite persistence for all workflow outputs
+### Failure Mode 1: Bad document quality creates missing fields
 
-Frontend:
+Real example from testing:
+The messy commercial invoice intentionally has missing or unclear Incoterms. The extractor may return `null` or low confidence for `incoterms`.
 
-- React + Vite single-screen UI
-- sample run buttons
-- file upload flow
-- extracted fields, validation, and decision display
-- query box for stored-data questions
-
-## Why This Architecture
-
-The architecture separates unstable, unstructured work from stable policy logic.
-
-- Extraction is model-based because documents are visual and semi-structured.
-- Validation is deterministic because business rules should be testable and predictable.
-- Routing is deterministic because approval boundaries should be explicit.
-- Querying uses the model for planning and summarization, but only after backend SQL safety checks.
-
-This keeps the AI surface focused while preserving a strong trust boundary.
-
-## Three Real Failure Modes
-
-### 1. Missing or low-confidence field extraction
-
-Example:
-Incoterms is absent in a low-quality scan or extracted with weak confidence.
-
-Impact:
-If treated as complete, the system could approve a shipment without enough evidence.
+Why it is dangerous:
+If the system guesses the value, it could approve a shipment without evidence.
 
 Current handling:
+Each extracted field must include `value`, `confidence`, and `evidence`. The validator marks missing or confidence `< 0.75` fields as `uncertain`. Because Incoterms is a critical field in `customer-rules.json`, the router does not auto-approve the run. It routes the case to amendment/review.
 
-- extraction carries confidence per field
-- validator converts missing or low-confidence fields into `uncertain`
-- router blocks approval and escalates the case
+### Failure Mode 2: A plausible-looking critical mismatch slips through
 
-### 2. Critical mismatch hidden inside plausible text
+Real example from testing:
+The messy invoice uses values like `Atlas Retail Imports Pvt Ltd`, wrong HS code, and different gross weight. These look close to valid trade fields, but they conflict with the Atlas Retail India rules.
 
-Example:
-The consignee name is close to the expected value but materially different.
-
-Impact:
-A shipment could be processed under the wrong party or commercial terms.
+Why it is dangerous:
+The document is not blank or obviously broken, so a weak system may treat it as valid. In real operations, that could create wrong-party, customs, or shipment-delay risk.
 
 Current handling:
+The validator does deterministic comparison against configured customer rules. Critical mismatches in consignee, HS code, Incoterms, ports, or gross weight force `draft_amendment`. The router generates an amendment draft with found vs expected values instead of burying the discrepancy in generic text.
 
-- deterministic rule comparison checks normalized values
-- critical fields force `draft_amendment` when not matched
-- discrepancy details are preserved in the stored decision
+### Failure Mode 3: The query agent generates unsafe or ungrounded SQL
 
-### 3. Natural-language query tries to escape the data boundary
+Real example from testing:
+The backend tests now explicitly reject unsafe plans such as `DELETE FROM runs` and queries against disallowed tables like `users`.
 
-Example:
-The model generates unsafe SQL or references nonexistent tables.
-
-Impact:
-The system could become untrustworthy or unsafe if query execution were unconstrained.
+Why it is dangerous:
+Natural-language query is useful, but an LLM should not be trusted to directly execute database operations.
 
 Current handling:
+The query agent only proposes a SQL plan. The backend validates that the SQL is a single read-only `SELECT`, blocks forbidden keywords, allowlists tables, appends `LIMIT 20` for row-listing queries, executes the query itself, and summarizes only returned rows.
 
-- SQL must be a single read-only `SELECT`
-- forbidden SQL keywords are rejected
-- referenced tables are allowlisted
-- aggregate and row-listing behavior is normalized before execution
+## 3. Observability For 50 Customers
 
-## Observability Plan
+For production, every shipment should get a stable `trace_id` at intake. If the input starts from email, the email ingestion service should attach the same `trace_id` to the email, attachment, document row, pipeline run, model request, validation result, routing decision, and final verified output.
 
-For the POC, observability is intentionally lightweight, but the next production step is clear.
+Trace path:
 
-Current signals:
+```txt
+email_received -> attachment_saved -> run_created -> extraction_started
+-> extraction_completed -> validation_completed -> routing_completed
+-> human_review_completed or auto_approved
+```
 
-- request logging through Morgan
-- persisted run data in SQLite
-- raw extraction, validation, and decision payloads stored per run
-- query history persisted for later inspection
+What I would log per stage:
 
-Recommended next layer:
+- `trace_id`, `customer_id`, `shipment_id`, `document_id`, `run_id`
+- stage name and status
+- model name and token usage
+- latency in milliseconds
+- retry count
+- confidence summary
+- decision outcome
+- error code and safe error message
 
-- per-stage latency metrics for extraction, validation, routing, query planning, and query execution
-- error counters by failure type
-- confidence distribution by field
-- amendment rate by customer and document type
-- trace IDs flowing from upload through all pipeline stages
+Production dashboard:
 
-## Estimated Cost Per Document
+- completed runs by customer and document type
+- stuck runs by stage
+- extraction latency p50/p95/p99
+- extraction failure rate
+- critical mismatch rate
+- auto-approval rate
+- human-review queue size and age
+- amendment draft acceptance rate
+- cost per customer and cost per document
+- top failing fields, such as Incoterms or gross weight
 
-This is an estimate, not a measured billing report.
+This would let an operator search one shipment and see exactly where it is, while leadership sees whether Nova is reducing review time without increasing critical escapes.
 
-The main variable cost is the Gemini extraction call. For this POC, validation, routing, and SQLite storage are effectively negligible. Query cost is also small because questions are short and row payloads are bounded.
+## 4. Cost Per Document
 
-A reasonable POC framing is:
+Using current Gemini 2.5 Flash public pricing as the rough baseline: input is about `$0.30 / 1M` text/image/video tokens and output is about `$2.50 / 1M` tokens.
 
-- extraction: dominant cost
-- query planning and summarization: low incremental cost
-- storage and API serving: negligible at this scale
+Back-of-envelope for one normal document:
 
-Practically, this means one document run should be cheap enough for a demo workload, but cost discipline will matter once volume or document length increases. The first production lever should be model routing by document quality and document type.
+```txt
+Extraction input: 8,000 tokens  * $0.30 / 1M = $0.0024
+Extraction output: 1,000 tokens * $2.50 / 1M = $0.0025
+Query input:      2,000 tokens  * $0.30 / 1M = $0.0006
+Query output:       500 tokens  * $2.50 / 1M = $0.00125
 
-## Latency Bottleneck
+Approx total for one document plus one query: ~$0.00675
+```
 
-The main latency bottleneck is the extraction step because it depends on multimodal model inference over PDFs or images.
+This is only an estimate. The real implementation should store model usage metadata per run and calculate actual cost from provider billing units.
 
-The rest of the chain is comparatively fast:
+Where cost blows up:
 
-- validation is in-memory deterministic logic
-- routing is in-memory deterministic logic
-- SQLite writes are small
-- query execution is local and lightweight
+- long multi-page PDFs
+- repeated retries on poor scans
+- using the strongest model for every document
+- letting the query agent return too many rows
+- asking the model to reason over full raw JSON repeatedly
 
-If users report slowness, the extraction call is the first place to instrument and optimize.
+Cost controls:
 
-## What I Would Improve With One More Week
+- cap file size and page count
+- one extraction attempt in the POC, bounded retries in production
+- route simple text-only query summarization to a cheaper model
+- cache extracted results by document hash
+- store normalized rows so queries do not need full raw extraction JSON
+- enforce SQL `LIMIT` and response token limits
 
-1. Add a proper eval harness with expected outputs across more clean, messy, and low-quality fixtures.
-2. Split prompts by document type so invoices, packing lists, and bills of lading each get tighter extraction instructions.
-3. Add explicit reviewer actions in the UI such as mark approved, request correction, and inspect evidence side-by-side with the document.
-4. Move from local SQLite to Postgres to support stronger queryability and concurrent usage.
-5. Add durable orchestration and retries so long-running or failed extraction steps can recover cleanly.
+## 5. Latency
 
-## Testing Strategy
+Slowest hop:
+The extraction call is the slowest hop because Gemini must process a PDF/image and return structured JSON. Validation, routing, SQLite writes, and SQL execution are comparatively small local operations.
 
-The codebase now includes deterministic tests for:
+Expected latency shape:
 
-- validator clean fixture behavior
-- validator messy fixture behavior
-- router auto-approve path
-- router human-review path
-- router amendment path
-- query SQL safety and grounded fallback behavior
+```txt
+Upload and metadata save: low milliseconds
+Gemini extraction: seconds
+Validation: low milliseconds
+Routing: low milliseconds
+SQLite persistence: low milliseconds
+Query planning + summarization: usually sub-extraction, but still model-bound
+```
 
-This keeps the most business-critical logic verifiable without relying on live model calls.
+How I would improve latency:
 
-## Production Direction
+- split large PDFs into pages and process only relevant pages first
+- use document-type detection to choose a tighter prompt
+- run extraction asynchronously and show pipeline state in the UI
+- cache repeated document hashes
+- use a cheaper/faster model for query summarization
+- collect p95 latency per stage before optimizing anything else
 
-The current implementation uses custom orchestration because the workflow is short and linear. A production-ready version could map directly to a workflow engine such as LangGraph, Temporal, or a queue-backed job system.
+## 6. What I Would Do Differently With A Week
 
-That upgrade would help with:
+With a week instead of a day, I would spend most of it on reliability and evals rather than adding more agents.
 
-- retries
-- long-running execution
-- manual intervention steps
-- richer traces and state transitions
-- customer-specific branching logic
+1. Build a real eval harness with labeled clean, messy, and low-quality documents.
+2. Add step-level persistence with `pipeline_steps` so runs can resume after a crash.
+3. Add model usage logging so cost per document is measured instead of estimated.
+4. Add side-by-side evidence review in the UI so CG can verify extracted snippets faster.
+5. Add reviewer feedback capture: accepted, corrected, rejected, and reason.
+6. Add customer-rule versioning so future audits know which rule set made the decision.
 
-## Conclusion
-
-The strongest part of this POC is not just that it extracts fields from documents. The stronger technical story is that it creates an auditable decision workflow around those fields. AI is used where ambiguity is unavoidable, and deterministic code is used where business trust matters most.
+The main thing I would not do first is expand to a bigger agent framework just for appearance. The current workflow is linear. The higher-risk problems are extraction quality, crash recovery, cost visibility, and operator trust.
