@@ -109,6 +109,14 @@ cd backend
 npm run extract:sample -- ../samples/clean/commercial-invoice.pdf
 ```
 
+Run the Validator Agent against deterministic fixtures:
+
+```bash
+cd backend
+npm run validate:fixture
+npm run validate:fixture -- messy
+```
+
 ## Current Status
 
 Done:
@@ -119,11 +127,12 @@ Done:
 - SQLite storage initializes automatically on backend startup
 - Customer validation rules added for the synthetic Atlas Retail shipment
 - Extractor Agent added for Gemini-based PDF/image field extraction
+- Validator Agent added for deterministic field-by-field rule checks
 - Frontend folder reserved
 
 Next:
 
-- Implement Validator, Router, and Query agents
+- Implement Router and Query agents
 - Build the React + Vite UI
 
 ## Environment
