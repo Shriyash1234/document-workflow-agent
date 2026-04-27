@@ -1,0 +1,35 @@
+{
+  "customer": "Atlas Retail India Pvt Ltd",
+  "description": "Validation rules for the synthetic customer used in the Part 1 document pipeline POC.",
+  "confidenceThreshold": 0.75,
+  "expected": {
+    "consignee_name": "Atlas Retail India Pvt Ltd",
+    "hs_code": "847130",
+    "port_of_loading": "Shanghai, China",
+    "port_of_discharge": "Nhava Sheva, India",
+    "incoterms": "CIF Nhava Sheva, Incoterms 2020",
+    "description_of_goods": "Laptop computers and accessories",
+    "gross_weight": "1240 KG"
+  },
+  "requiredFields": [
+    "consignee_name",
+    "hs_code",
+    "port_of_loading",
+    "port_of_discharge",
+    "incoterms",
+    "description_of_goods",
+    "gross_weight",
+    "invoice_number"
+  ],
+  "criticalFields": [
+    "consignee_name",
+    "hs_code",
+    "port_of_loading",
+    "port_of_discharge",
+    "incoterms",
+    "gross_weight"
+  ],
+  "presenceOnlyFields": [
+    "invoice_number"
+  ]
+}

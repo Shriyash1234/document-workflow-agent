@@ -5,6 +5,7 @@ import morgan from "morgan";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadCustomerRules } from "./rules/customerRules.js";
 import { getDatabaseStatus } from "./storage/database.js";
 
 dotenv.config();
@@ -42,6 +43,19 @@ app.get("/api/samples", async (_request: Request, response: Response, next: Next
       ok: true,
       samplesRoot: "samples",
       manifest,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/rules/customer", async (_request: Request, response: Response, next: NextFunction) => {
+  try {
+    const rules = await loadCustomerRules();
+
+    response.json({
+      ok: true,
+      rules,
     });
   } catch (error) {
     next(error);

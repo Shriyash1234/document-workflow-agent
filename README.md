@@ -81,6 +81,7 @@ Available endpoints:
 ```txt
 GET /api/health
 GET /api/samples
+GET /api/rules/customer
 ```
 
 The backend initializes SQLite automatically on startup. By default the database is created at:
@@ -97,11 +98,11 @@ Done:
 - Synthetic clean and messy sample documents created
 - Backend skeleton created with health and sample-list endpoints
 - SQLite storage initializes automatically on backend startup
+- Customer validation rules added for the synthetic Atlas Retail shipment
 - Frontend folder reserved
 
 Next:
 
-- Add customer validation rules
 - Implement Extractor, Validator, Router, and Query agents
 - Build the React + Vite UI
 
