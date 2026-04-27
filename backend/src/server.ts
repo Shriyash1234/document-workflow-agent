@@ -5,6 +5,7 @@ import morgan from "morgan";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { getDatabaseStatus } from "./storage/database.js";
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ app.get("/api/health", (_request: Request, response: Response) => {
     service: "agentic-workflow-backend",
     environment: process.env.NODE_ENV ?? "development",
     geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
+    database: getDatabaseStatus(),
     timestamp: new Date().toISOString(),
   });
 });

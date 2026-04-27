@@ -83,6 +83,12 @@ GET /api/health
 GET /api/samples
 ```
 
+The backend initializes SQLite automatically on startup. By default the database is created at:
+
+```txt
+backend/data/agentic-workflow.db
+```
+
 ## Current Status
 
 Done:
@@ -90,11 +96,11 @@ Done:
 - Project folders created
 - Synthetic clean and messy sample documents created
 - Backend skeleton created with health and sample-list endpoints
+- SQLite storage initializes automatically on backend startup
 - Frontend folder reserved
 
 Next:
 
-- Add SQLite storage
 - Add customer validation rules
 - Implement Extractor, Validator, Router, and Query agents
 - Build the React + Vite UI
