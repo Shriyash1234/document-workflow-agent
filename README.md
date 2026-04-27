@@ -96,6 +96,7 @@ GET /api/samples
 GET /api/rules/customer
 POST /api/runs/sample
 GET /api/runs/:id
+POST /api/query
 ```
 
 The backend initializes SQLite automatically on startup. By default the database is created at:
@@ -135,6 +136,16 @@ curl -X POST http://localhost:4000/api/runs/sample \
   -d "{\"samplePath\":\"clean/commercial-invoice.pdf\"}"
 ```
 
+Ask a grounded question over stored runs:
+
+```bash
+curl -X POST http://localhost:4000/api/query \
+  -H "Content-Type: application/json" \
+  -d "{\"question\":\"how many shipments were flagged this week?\"}"
+```
+
+The query layer uses Gemini to generate read-only SQLite `SELECT` statements from a schema dictionary. The backend validates that SQL is single-statement and read-only before execution, then Gemini summarizes only from returned rows.
+
 ## Current Status
 
 Done:
@@ -148,11 +159,11 @@ Done:
 - Validator Agent added for deterministic field-by-field rule checks
 - Router Agent added for approve/review/amendment decisions
 - Sample pipeline endpoint added for Extractor -> Validator -> Router -> SQLite runs
+- Query Agent added for grounded natural-language questions over SQLite
 - Frontend folder reserved
 
 Next:
 
-- Implement Query agent
 - Build the React + Vite UI
 
 ## Environment
@@ -162,6 +173,7 @@ The backend uses `backend/.env`:
 ```env
 GEMINI_API_KEY=your_key_here
 GEMINI_MODEL=gemini-2.5-flash
+GEMINI_FALLBACK_MODEL=gemini-2.5-flash
 PORT=4000
 DATABASE_PATH=./data/agentic-workflow.db
 ```

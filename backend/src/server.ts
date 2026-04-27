@@ -2,6 +2,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express, { type NextFunction, type Request, type Response } from "express";
 import morgan from "morgan";
+import { QueryAgent } from "./agents/queryAgent.js";
 import { loadCustomerRules } from "./rules/customerRules.js";
 import { runSamplePipeline } from "./services/pipelineService.js";
 import { loadSamplesManifest } from "./services/sampleDocuments.js";
@@ -12,6 +13,7 @@ dotenv.config();
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
+const queryAgent = new QueryAgent();
 
 app.use(morgan("dev"));
 app.use(cors());
@@ -92,6 +94,28 @@ app.get("/api/runs/:id", (request: Request, response: Response) => {
     ok: true,
     run,
   });
+});
+
+app.post("/api/query", async (request: Request, response: Response, next: NextFunction) => {
+  try {
+    const question = request.body?.question;
+    if (typeof question !== "string" || question.trim().length === 0) {
+      response.status(400).json({
+        ok: false,
+        error: "question is required.",
+      });
+      return;
+    }
+
+    const result = await queryAgent.answer(question);
+
+    response.json({
+      ok: true,
+      result,
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.use((_request: Request, response: Response) => {
