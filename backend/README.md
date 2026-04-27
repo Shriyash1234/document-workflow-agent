@@ -10,3 +10,22 @@ Planned responsibilities:
 - route each run to approve, human review, or amendment draft
 - store runs, extracted fields, validation results, and decisions in SQLite
 
+## Run
+
+From the repo root:
+
+```bash
+npm run dev:backend
+```
+
+Health check:
+
+```txt
+GET http://localhost:4000/api/health
+```
+
+Sample manifest:
+
+```txt
+GET http://localhost:4000/api/samples
+```

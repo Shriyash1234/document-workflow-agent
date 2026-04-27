@@ -55,17 +55,45 @@ Upload document
   -> Query layer answers basic questions from stored data
 ```
 
+## Backend
+
+Install backend dependencies:
+
+```bash
+cd backend
+npm install
+```
+
+Run the backend from the repo root:
+
+```bash
+npm run dev:backend
+```
+
+Backend URL:
+
+```txt
+http://localhost:4000
+```
+
+Available endpoints:
+
+```txt
+GET /api/health
+GET /api/samples
+```
+
 ## Current Status
 
 Done:
 
 - Project folders created
 - Synthetic clean and messy sample documents created
-- Backend and frontend folders reserved
+- Backend skeleton created with health and sample-list endpoints
+- Frontend folder reserved
 
 Next:
 
-- Build the Node.js backend skeleton
 - Add SQLite storage
 - Add customer validation rules
 - Implement Extractor, Validator, Router, and Query agents
