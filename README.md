@@ -64,6 +64,18 @@ cd backend
 npm install
 ```
 
+Create backend environment file:
+
+```bash
+copy .env.example .env
+```
+
+Then set:
+
+```env
+GEMINI_API_KEY=your_key_here
+```
+
 Run the backend from the repo root:
 
 ```bash
@@ -90,6 +102,13 @@ The backend initializes SQLite automatically on startup. By default the database
 backend/data/agentic-workflow.db
 ```
 
+Run the Extractor Agent against a sample document:
+
+```bash
+cd backend
+npm run extract:sample -- ../samples/clean/commercial-invoice.pdf
+```
+
 ## Current Status
 
 Done:
@@ -99,19 +118,21 @@ Done:
 - Backend skeleton created with health and sample-list endpoints
 - SQLite storage initializes automatically on backend startup
 - Customer validation rules added for the synthetic Atlas Retail shipment
+- Extractor Agent added for Gemini-based PDF/image field extraction
 - Frontend folder reserved
 
 Next:
 
-- Implement Extractor, Validator, Router, and Query agents
+- Implement Validator, Router, and Query agents
 - Build the React + Vite UI
 
 ## Environment
 
-The backend will need a `.env` file once implementation begins:
+The backend uses `backend/.env`:
 
 ```env
 GEMINI_API_KEY=your_key_here
+GEMINI_MODEL=gemini-2.5-flash
 PORT=4000
 DATABASE_PATH=./data/agentic-workflow.db
 ```
