@@ -1,0 +1,65 @@
+{
+  "generatedAt": "2026-04-27T08:26:54.784Z",
+  "cleanShipment": {
+    "title": "Clean Shipment",
+    "invoiceNumber": "INV-2026-0417",
+    "bolNumber": "BOL-SEA-88291",
+    "shipper": "Shenzhen Tech Components Ltd.",
+    "consignee": "Atlas Retail India Pvt Ltd",
+    "notifyParty": "Atlas Retail India Pvt Ltd",
+    "portLoading": "Shanghai, China",
+    "portDischarge": "Nhava Sheva, India",
+    "finalDestination": "Mumbai, India",
+    "incoterms": "CIF Nhava Sheva, Incoterms 2020",
+    "hsCode": "847130",
+    "description": "Laptop computers and accessories",
+    "grossWeight": "1240 KG",
+    "netWeight": "1100 KG",
+    "packages": "40 cartons",
+    "vessel": "MV Eastern Horizon",
+    "voyage": "EH0426",
+    "countryOrigin": "China",
+    "date": "17 Apr 2026"
+  },
+  "messyShipmentNotes": {
+    "purpose": "Intentional validation failures for the POC.",
+    "mismatches": [
+      "Commercial invoice consignee omits 'India'.",
+      "Commercial invoice HS code is 847150 instead of expected 847130.",
+      "Commercial invoice Incoterms is missing.",
+      "Commercial invoice gross weight is 1280 KG while bill of lading remains 1240 KG."
+    ]
+  },
+  "outputs": [
+    {
+      "html": "html/clean-commercial-invoice.html",
+      "png": "clean/commercial-invoice.png",
+      "pdf": "clean/commercial-invoice.pdf"
+    },
+    {
+      "html": "html/messy-commercial-invoice.html",
+      "png": "messy/commercial-invoice-messy.png",
+      "pdf": "messy/commercial-invoice-messy.pdf"
+    },
+    {
+      "html": "html/clean-packing-list.html",
+      "png": "clean/packing-list.png",
+      "pdf": "clean/packing-list.pdf"
+    },
+    {
+      "html": "html/messy-packing-list.html",
+      "png": "messy/packing-list-messy.png",
+      "pdf": "messy/packing-list-messy.pdf"
+    },
+    {
+      "html": "html/clean-bill-of-lading.html",
+      "png": "clean/bill-of-lading.png",
+      "pdf": "clean/bill-of-lading.pdf"
+    },
+    {
+      "html": "html/messy-bill-of-lading.html",
+      "png": "messy/bill-of-lading-messy.png",
+      "pdf": "messy/bill-of-lading-messy.pdf"
+    }
+  ]
+}
