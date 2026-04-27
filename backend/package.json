@@ -7,6 +7,7 @@
     "dev": "nodemon",
     "build": "tsc -p tsconfig.json",
     "extract:sample": "tsx src/scripts/extractSample.ts",
+    "route:fixture": "tsx src/scripts/routeFixture.ts",
     "validate:fixture": "tsx src/scripts/validateFixture.ts",
     "start": "node dist/server.js"
   },

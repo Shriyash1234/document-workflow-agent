@@ -117,6 +117,14 @@ npm run validate:fixture
 npm run validate:fixture -- messy
 ```
 
+Run the Router Agent against deterministic fixtures:
+
+```bash
+cd backend
+npm run route:fixture
+npm run route:fixture -- messy
+```
+
 ## Current Status
 
 Done:
@@ -128,11 +136,12 @@ Done:
 - Customer validation rules added for the synthetic Atlas Retail shipment
 - Extractor Agent added for Gemini-based PDF/image field extraction
 - Validator Agent added for deterministic field-by-field rule checks
+- Router Agent added for approve/review/amendment decisions
 - Frontend folder reserved
 
 Next:
 
-- Implement Router and Query agents
+- Implement Query agent
 - Build the React + Vite UI
 
 ## Environment
