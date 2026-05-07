@@ -63,3 +63,21 @@ export async function resolveSampleDocument(samplePath: string): Promise<Resolve
     sizeBytes: fileStats.size,
   };
 }
+
+export async function resolveSamplePreview(samplePath: string): Promise<ResolvedSampleDocument> {
+  const normalizedSamplePath = samplePath.replaceAll("\\", "/").replace(/^samples\//, "");
+  const manifest = await loadSamplesManifest();
+  const output = manifest.outputs.find((candidate) =>
+    [candidate.pdf, candidate.png].includes(normalizedSamplePath),
+  );
+
+  if (!output) {
+    throw new Error(`Sample preview path is not in the manifest: ${samplePath}`);
+  }
+
+  return resolveSampleDocument(output.png);
+}
+
+export function createSamplePreviewUrl(samplePath: string) {
+  return `/api/sample-preview?samplePath=${encodeURIComponent(samplePath)}`;
+}

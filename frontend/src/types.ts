@@ -75,6 +75,7 @@ export type SampleOutput = {
 export type SimulatedEmailAttachment = {
   fileName: string;
   samplePath: string;
+  previewUrl?: string;
   documentType: string;
 };
 
@@ -117,6 +118,8 @@ export type ShipmentDocumentResult = {
   documentId: string;
   runId: string;
   fileName: string;
+  samplePath: string | null;
+  previewUrl?: string | null;
   documentType: string;
   extraction: ExtractionResult;
   validation: ValidationSummary;

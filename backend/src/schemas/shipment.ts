@@ -10,6 +10,7 @@ export const crossDocumentStatusSchema = z.enum(["match", "mismatch", "uncertain
 export const simulatedEmailAttachmentSchema = z.object({
   fileName: z.string(),
   samplePath: z.string(),
+  previewUrl: z.string().optional(),
   documentType: documentTypeSchema,
 });
 
@@ -48,6 +49,8 @@ export const shipmentDocumentResultSchema = z.object({
   documentId: z.string(),
   runId: z.string(),
   fileName: z.string(),
+  samplePath: z.string().nullable(),
+  previewUrl: z.string().nullable().optional(),
   documentType: documentTypeSchema,
   extraction: extractionResultSchema,
   validation: validationSummarySchema,

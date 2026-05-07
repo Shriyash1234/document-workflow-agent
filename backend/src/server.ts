@@ -5,13 +5,14 @@ import morgan from "morgan";
 import { QueryAgent } from "./agents/queryAgent.js";
 import { loadCustomerRules } from "./rules/customerRules.js";
 import { runDocumentPipeline, runSamplePipeline } from "./services/pipelineService.js";
-import { loadSamplesManifest } from "./services/sampleDocuments.js";
+import { createSamplePreviewUrl, loadSamplesManifest, resolveSamplePreview } from "./services/sampleDocuments.js";
 import { processSimulatedEmail } from "./services/shipmentProcessingService.js";
 import { loadSimulatedInbox } from "./services/simulatedInbox.js";
 import { uploadedFileToPipelineDocument, uploadDocument } from "./services/uploads.js";
 import { getDatabaseStatus } from "./storage/database.js";
 import { getRun } from "./storage/runRepository.js";
 import { getLatestShipmentForEmail, getShipment } from "./storage/shipmentRepository.js";
+import type { ShipmentVerification, SimulatedEmail } from "./schemas/shipment.js";
 
 dotenv.config();
 
@@ -48,6 +49,32 @@ app.get("/api/samples", async (_request: Request, response: Response, next: Next
   }
 });
 
+app.get("/api/sample-preview", async (request: Request, response: Response, next: NextFunction) => {
+  try {
+    const samplePath = request.query.samplePath;
+    if (typeof samplePath !== "string" || samplePath.trim().length === 0) {
+      response.status(400).json({
+        ok: false,
+        error: "samplePath is required.",
+      });
+      return;
+    }
+
+    const preview = await resolveSamplePreview(samplePath);
+    response.type(preview.mimeType).sendFile(preview.absolutePath);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("Sample preview path is not in the manifest")) {
+      response.status(404).json({
+        ok: false,
+        error: error.message,
+      });
+      return;
+    }
+
+    next(error);
+  }
+});
+
 app.get("/api/rules/customer", async (_request: Request, response: Response, next: NextFunction) => {
   try {
     const rules = await loadCustomerRules();
@@ -67,10 +94,7 @@ app.get("/api/inbox", async (_request: Request, response: Response, next: NextFu
 
     response.json({
       ok: true,
-      emails: emails.map((email) => ({
-        ...email,
-        latestShipment: getLatestShipmentForEmail(email.emailId),
-      })),
+      emails: emails.map((email) => enrichEmail(email)),
     });
   } catch (error) {
     next(error);
@@ -84,7 +108,7 @@ app.post("/api/inbox/:emailId/process", async (request: Request, response: Respo
 
     response.status(201).json({
       ok: true,
-      shipment,
+      shipment: enrichShipment(shipment),
     });
   } catch (error) {
     next(error);
@@ -164,7 +188,7 @@ app.get("/api/shipments/:id", (request: Request, response: Response) => {
 
   response.json({
     ok: true,
-    shipment,
+    shipment: enrichShipment(shipment),
   });
 });
 
@@ -208,3 +232,33 @@ app.use((error: unknown, _request: Request, response: Response, _next: NextFunct
 app.listen(port, () => {
   console.log(`Agentic workflow backend running at http://localhost:${port}`);
 });
+
+function enrichEmail(email: SimulatedEmail) {
+  return {
+    ...email,
+    attachments: email.attachments.map((attachment) => ({
+      ...attachment,
+      previewUrl: createSamplePreviewUrl(attachment.samplePath),
+    })),
+    latestShipment: enrichShipment(getLatestShipmentForEmail(email.emailId)),
+  };
+}
+
+function enrichShipment(shipment: ShipmentVerification | null): ShipmentVerification | null {
+  if (!shipment) return null;
+
+  return {
+    ...shipment,
+    email: {
+      ...shipment.email,
+      attachments: shipment.email.attachments.map((attachment) => ({
+        ...attachment,
+        previewUrl: createSamplePreviewUrl(attachment.samplePath),
+      })),
+    },
+    documents: shipment.documents.map((document) => ({
+      ...document,
+      previewUrl: document.samplePath ? createSamplePreviewUrl(document.samplePath) : null,
+    })),
+  };
+}

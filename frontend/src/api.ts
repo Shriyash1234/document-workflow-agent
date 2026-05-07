@@ -2,6 +2,12 @@ import type { InboxEmail, QueryResult, SampleOutput, ShipmentVerification, Store
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000";
 
+export function toApiUrl(path: string | null | undefined) {
+  if (!path) return null;
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  return `${API_BASE_URL}${path}`;
+}
+
 async function requestJson<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, options);
   const data = await response.json().catch(() => null);

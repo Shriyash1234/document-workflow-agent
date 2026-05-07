@@ -167,6 +167,7 @@ function buildShipmentVerification(shipment: ShipmentRow): ShipmentVerification 
       documentId: document.id,
       runId: document.run_id,
       fileName: document.file_name,
+      samplePath: document.sample_path,
       documentType: document.document_type,
       extraction: run.extraction,
       validation: run.validation,
