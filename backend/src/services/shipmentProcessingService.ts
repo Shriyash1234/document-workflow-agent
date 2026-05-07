@@ -1,5 +1,7 @@
+import { loadCustomerRules } from "../rules/customerRules.js";
 import type { ShipmentVerification } from "../schemas/shipment.js";
 import {
+  completeShipment,
   createShipment,
   failShipment,
   getShipment,
@@ -8,6 +10,7 @@ import {
 } from "../storage/shipmentRepository.js";
 import { CrossDocumentValidator, type CrossDocumentInput } from "./crossDocumentValidator.js";
 import { runDocumentPipeline } from "./pipelineService.js";
+import { createShipmentDecision } from "./shipmentDecisionService.js";
 import { getSimulatedEmail, resolveInboxAttachment } from "./simulatedInbox.js";
 
 const crossDocumentValidator = new CrossDocumentValidator();
@@ -50,7 +53,12 @@ export async function processSimulatedEmail(emailId: string): Promise<ShipmentVe
       });
     }
 
-    saveCrossDocumentResults(shipmentId, crossDocumentValidator.validate(processedDocuments));
+    const rules = await loadCustomerRules();
+    const crossDocumentResults = crossDocumentValidator.validate(processedDocuments);
+    const decision = createShipmentDecision(email.customer, crossDocumentResults, rules);
+
+    saveCrossDocumentResults(shipmentId, crossDocumentResults);
+    completeShipment({ shipmentId, crossDocumentResults, decision });
 
     return requireShipment(shipmentId);
   } catch (error) {
