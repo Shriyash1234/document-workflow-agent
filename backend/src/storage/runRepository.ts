@@ -4,7 +4,7 @@ import type { DecisionResult } from "../schemas/decision.js";
 import type { ExtractionResult } from "../schemas/extraction.js";
 import type { ValidationSummary } from "../schemas/validation.js";
 
-export type RunSourceType = "sample" | "upload";
+export type RunSourceType = "sample" | "upload" | "email";
 
 export type StoredRun = {
   id: string;

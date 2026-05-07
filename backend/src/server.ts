@@ -6,7 +6,8 @@ import { QueryAgent } from "./agents/queryAgent.js";
 import { loadCustomerRules } from "./rules/customerRules.js";
 import { runDocumentPipeline, runSamplePipeline } from "./services/pipelineService.js";
 import { loadSamplesManifest } from "./services/sampleDocuments.js";
-import { getSimulatedEmail, loadSimulatedInbox } from "./services/simulatedInbox.js";
+import { processSimulatedEmail } from "./services/shipmentProcessingService.js";
+import { loadSimulatedInbox } from "./services/simulatedInbox.js";
 import { uploadedFileToPipelineDocument, uploadDocument } from "./services/uploads.js";
 import { getDatabaseStatus } from "./storage/database.js";
 import { getRun } from "./storage/runRepository.js";
@@ -79,12 +80,11 @@ app.get("/api/inbox", async (_request: Request, response: Response, next: NextFu
 app.post("/api/inbox/:emailId/process", async (request: Request, response: Response, next: NextFunction) => {
   try {
     const emailId = Array.isArray(request.params.emailId) ? request.params.emailId[0] : request.params.emailId;
-    const email = await getSimulatedEmail(emailId);
+    const shipment = await processSimulatedEmail(emailId);
 
-    response.status(501).json({
-      ok: false,
-      email,
-      error: "Shipment processing is not implemented yet. The route is ready for the Step 5 pipeline.",
+    response.status(201).json({
+      ok: true,
+      shipment,
     });
   } catch (error) {
     next(error);
