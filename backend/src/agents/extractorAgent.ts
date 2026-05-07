@@ -3,6 +3,7 @@ import { generateGeminiContent } from "../llm/geminiClient.js";
 import { getMimeType } from "../lib/mime.js";
 import { geminiExtractionResponseSchema } from "../schemas/geminiExtractionSchema.js";
 import { extractionResultSchema, type ExtractionResult } from "../schemas/extraction.js";
+import type { z } from "zod";
 
 const extractionPrompt = `
 You are the Extractor Agent for a governed trade-document workflow.
@@ -26,35 +27,60 @@ Rules:
 - Do not infer values from general knowledge. Only use the document.
 `.trim();
 
+type GenerateContent = typeof generateGeminiContent;
+
 export class ExtractorAgent {
+  constructor(private readonly generateContent: GenerateContent = generateGeminiContent) {}
+
   async extractFromFile(filePath: string): Promise<ExtractionResult> {
     const mimeType = getMimeType(filePath);
     const fileBuffer = await readFile(filePath);
+    let lastParseError: unknown;
 
-    const responseText = await generateGeminiContent({
-      contents: [
-        {
-          role: "user",
-          parts: [
-            { text: extractionPrompt },
-            {
-              inlineData: {
-                mimeType,
-                data: fileBuffer.toString("base64"),
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      const responseText = await this.generateContent({
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: extractionPrompt },
+              {
+                inlineData: {
+                  mimeType,
+                  data: fileBuffer.toString("base64"),
+                },
               },
-            },
-          ],
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0,
+          maxOutputTokens: 2200,
+          responseMimeType: "application/json",
+          responseSchema: geminiExtractionResponseSchema,
         },
-      ],
-      generationConfig: {
-        temperature: 0,
-        maxOutputTokens: 1800,
-        responseMimeType: "application/json",
-        responseSchema: geminiExtractionResponseSchema,
-      },
-    });
+      });
 
-    const parsed = JSON.parse(responseText);
-    return extractionResultSchema.parse(parsed);
+      try {
+        return extractionResultSchema.parse(JSON.parse(responseText));
+      } catch (error) {
+        lastParseError = error;
+      }
+    }
+
+    throw createInvalidExtractionJsonError(lastParseError);
   }
+}
+
+function createInvalidExtractionJsonError(error: unknown) {
+  if (error instanceof SyntaxError) {
+    return new Error(`Extractor Agent received malformed JSON from Gemini: ${error.message}`);
+  }
+
+  const zodError = error as z.ZodError | undefined;
+  if (zodError?.issues) {
+    return new Error(`Extractor Agent received JSON that did not match the extraction schema: ${zodError.message}`);
+  }
+
+  return error instanceof Error ? error : new Error("Extractor Agent received invalid JSON from Gemini.");
 }
