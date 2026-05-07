@@ -92,12 +92,61 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS shipments (
+    id TEXT PRIMARY KEY,
+    email_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    customer TEXT NOT NULL,
+    email_from TEXT NOT NULL,
+    email_subject TEXT NOT NULL,
+    email_received_at TEXT NOT NULL,
+    decision_outcome TEXT,
+    decision_reasoning TEXT,
+    draft_reply TEXT,
+    raw_email_json TEXT NOT NULL,
+    raw_cross_document_json TEXT,
+    raw_decision_json TEXT,
+    error_message TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS shipment_documents (
+    id TEXT PRIMARY KEY,
+    shipment_id TEXT NOT NULL,
+    run_id TEXT NOT NULL,
+    document_type TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    sample_path TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (shipment_id) REFERENCES shipments(id) ON DELETE CASCADE,
+    FOREIGN KEY (run_id) REFERENCES runs(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS cross_document_results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    shipment_id TEXT NOT NULL,
+    field_key TEXT NOT NULL,
+    result TEXT NOT NULL,
+    values_json TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (shipment_id) REFERENCES shipments(id) ON DELETE CASCADE
+  );
+
   CREATE INDEX IF NOT EXISTS idx_documents_run_id ON documents(run_id);
   CREATE INDEX IF NOT EXISTS idx_extracted_fields_run_id ON extracted_fields(run_id);
   CREATE INDEX IF NOT EXISTS idx_validation_results_run_id ON validation_results(run_id);
   CREATE INDEX IF NOT EXISTS idx_decisions_run_id ON decisions(run_id);
   CREATE INDEX IF NOT EXISTS idx_runs_created_at ON runs(created_at);
   CREATE INDEX IF NOT EXISTS idx_runs_outcome ON runs(outcome);
+  CREATE INDEX IF NOT EXISTS idx_shipments_email_id ON shipments(email_id);
+  CREATE INDEX IF NOT EXISTS idx_shipments_customer ON shipments(customer);
+  CREATE INDEX IF NOT EXISTS idx_shipments_decision_outcome ON shipments(decision_outcome);
+  CREATE INDEX IF NOT EXISTS idx_shipment_documents_shipment_id ON shipment_documents(shipment_id);
+  CREATE INDEX IF NOT EXISTS idx_shipment_documents_run_id ON shipment_documents(run_id);
+  CREATE INDEX IF NOT EXISTS idx_cross_document_results_shipment_id ON cross_document_results(shipment_id);
+  CREATE INDEX IF NOT EXISTS idx_cross_document_results_result ON cross_document_results(result);
 `);
 
 export function getDatabaseStatus() {

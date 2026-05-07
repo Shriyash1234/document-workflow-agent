@@ -1,8 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { z } from "zod";
-import { documentTypeSchema } from "../schemas/extraction.js";
+import { simulatedEmailSchema, type SimulatedEmailAttachment } from "../schemas/shipment.js";
 import { resolveSampleDocument } from "./sampleDocuments.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -11,32 +10,12 @@ const backendRoot = path.resolve(__dirname, "..", "..");
 const workspaceRoot = path.resolve(backendRoot, "..");
 const inboxFixturePath = path.join(workspaceRoot, "samples", "inbox", "emails.json");
 
-const inboxAttachmentSchema = z.object({
-  fileName: z.string(),
-  samplePath: z.string(),
-  documentType: documentTypeSchema,
-});
-
-const simulatedEmailSchema = z.object({
-  emailId: z.string(),
-  from: z.string(),
-  subject: z.string(),
-  receivedAt: z.string(),
-  customer: z.string(),
-  status: z.enum(["incoming", "processing", "verified", "failed"]),
-  attachments: z.array(inboxAttachmentSchema).min(1),
-});
-
-const simulatedInboxSchema = z.object({
-  emails: z.array(simulatedEmailSchema),
-});
-
-export type SimulatedInboxAttachment = z.infer<typeof inboxAttachmentSchema>;
-export type SimulatedEmail = z.infer<typeof simulatedEmailSchema>;
+const simulatedInboxSchema = simulatedEmailSchema.array();
 
 export async function loadSimulatedInbox() {
   const fixtureText = await readFile(inboxFixturePath, "utf8");
-  return simulatedInboxSchema.parse(JSON.parse(fixtureText)).emails;
+  const fixture = JSON.parse(fixtureText) as { emails: unknown };
+  return simulatedInboxSchema.parse(fixture.emails);
 }
 
 export async function getSimulatedEmail(emailId: string) {
@@ -49,7 +28,7 @@ export async function getSimulatedEmail(emailId: string) {
   return email;
 }
 
-export async function resolveInboxAttachment(attachment: SimulatedInboxAttachment) {
+export async function resolveInboxAttachment(attachment: SimulatedEmailAttachment) {
   const sample = await resolveSampleDocument(attachment.samplePath);
 
   return {
