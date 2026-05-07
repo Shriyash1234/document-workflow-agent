@@ -4,13 +4,18 @@ import {
   failShipment,
   getShipment,
   linkShipmentDocument,
+  saveCrossDocumentResults,
 } from "../storage/shipmentRepository.js";
+import { CrossDocumentValidator, type CrossDocumentInput } from "./crossDocumentValidator.js";
 import { runDocumentPipeline } from "./pipelineService.js";
 import { getSimulatedEmail, resolveInboxAttachment } from "./simulatedInbox.js";
+
+const crossDocumentValidator = new CrossDocumentValidator();
 
 export async function processSimulatedEmail(emailId: string): Promise<ShipmentVerification> {
   const email = await getSimulatedEmail(emailId);
   const shipmentId = createShipment(email);
+  const processedDocuments: CrossDocumentInput[] = [];
 
   try {
     for (const attachment of email.attachments) {
@@ -33,7 +38,19 @@ export async function processSimulatedEmail(emailId: string): Promise<ShipmentVe
         fileName: attachment.fileName,
         samplePath: attachment.samplePath,
       });
+
+      if (!run.extraction) {
+        throw new Error(`Document extraction was not stored for run: ${run.id}`);
+      }
+
+      processedDocuments.push({
+        documentType: attachment.documentType,
+        fileName: attachment.fileName,
+        extraction: run.extraction,
+      });
     }
+
+    saveCrossDocumentResults(shipmentId, crossDocumentValidator.validate(processedDocuments));
 
     return requireShipment(shipmentId);
   } catch (error) {
