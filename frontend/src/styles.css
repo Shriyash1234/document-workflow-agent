@@ -15,7 +15,8 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -38,6 +39,15 @@ input {
   border: 1px solid #b8c3cf;
   background: #fff;
   padding: 8px 10px;
+}
+
+textarea {
+  width: 100%;
+  min-height: 260px;
+  border: 1px solid #b8c3cf;
+  padding: 10px;
+  resize: vertical;
+  line-height: 1.45;
 }
 
 .app-shell {
@@ -84,20 +94,26 @@ h2 {
 
 .status-pill.good,
 .result-badge.match,
-.outcome.auto_approve {
+.outcome.auto_approve,
+.outcome.approved,
+.outcome.verified {
   background: #d9f2e3;
   color: #146c3e;
 }
 
 .status-pill.warn,
 .result-badge.uncertain,
-.outcome.human_review {
+.outcome.human_review,
+.outcome.processing,
+.outcome.incoming {
   background: #fff0cf;
   color: #8a5a00;
 }
 
 .result-badge.mismatch,
-.outcome.draft_amendment {
+.outcome.draft_amendment,
+.outcome.needs_amendment,
+.outcome.failed {
   background: #ffe0dc;
   color: #a33629;
 }
@@ -130,12 +146,73 @@ h2 {
   margin-bottom: 14px;
 }
 
+.workflow-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(300px, 0.8fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.shipment-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.shipment-grid .panel:nth-child(-n + 2) {
+  grid-column: span 2;
+}
+
 .sample-list,
+.inbox-list,
 form.panel,
 .query-form {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.inbox-list {
+  display: grid;
+}
+
+.email-card {
+  border: 1px solid #d7e0e9;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.email-head,
+.email-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.email-head p {
+  margin: 4px 0 0;
+  color: #607080;
+}
+
+.email-actions {
+  justify-content: flex-start;
+  margin-top: 12px;
+}
+
+.email-meta,
+.summary-panel dl {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+}
+
+.email-meta div,
+.summary-panel dl div {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 10px;
 }
 
 form.panel {
@@ -194,6 +271,14 @@ td {
   overflow-wrap: anywhere;
 }
 
+.clickable-row {
+  cursor: pointer;
+}
+
+.clickable-row:hover {
+  background: #f6f8fa;
+}
+
 th {
   color: #506070;
   font-size: 13px;
@@ -222,8 +307,24 @@ th {
   white-space: pre-wrap;
 }
 
+.draft-panel {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
 .query-panel {
   margin-top: 14px;
+}
+
+.part-one {
+  margin-top: 14px;
+}
+
+.part-one > summary {
+  cursor: pointer;
+  margin-bottom: 14px;
+  font-weight: 700;
 }
 
 .query-form {
@@ -242,6 +343,8 @@ th {
 @media (max-width: 860px) {
   .topbar,
   .control-grid,
+  .workflow-grid,
+  .shipment-grid,
   .run-grid {
     grid-template-columns: 1fr;
   }
@@ -250,7 +353,8 @@ th {
     display: grid;
   }
 
-  .run-grid .panel:nth-child(n + 2) {
+  .run-grid .panel:nth-child(n + 2),
+  .shipment-grid .panel:nth-child(-n + 2) {
     grid-column: auto;
   }
 

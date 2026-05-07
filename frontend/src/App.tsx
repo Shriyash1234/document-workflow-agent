@@ -1,6 +1,22 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { askQuery, getHealth, getSamples, runSample, uploadDocument } from "./api";
-import type { QueryResult, SampleOutput, StoredRun, ValidationResult } from "./types";
+import {
+  askQuery,
+  getHealth,
+  getInbox,
+  getSamples,
+  processInboxEmail,
+  runSample,
+  uploadDocument,
+} from "./api";
+import type {
+  CrossDocumentResult,
+  InboxEmail,
+  QueryResult,
+  SampleOutput,
+  ShipmentVerification,
+  StoredRun,
+  ValidationResult,
+} from "./types";
 
 const fieldLabels: Record<string, string> = {
   consignee_name: "Consignee",
@@ -16,23 +32,34 @@ const fieldLabels: Record<string, string> = {
 function App() {
   const [health, setHealth] = useState("Checking");
   const [samples, setSamples] = useState<SampleOutput[]>([]);
+  const [inbox, setInbox] = useState<InboxEmail[]>([]);
+  const [shipment, setShipment] = useState<ShipmentVerification | null>(null);
+  const [selectedDiscrepancy, setSelectedDiscrepancy] = useState<CrossDocumentResult | null>(null);
+  const [draftReply, setDraftReply] = useState("");
   const [run, setRun] = useState<StoredRun | null>(null);
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
-  const [query, setQuery] = useState("how many shipments were flagged this week?");
+  const [query, setQuery] = useState("show me everything pending review for customer Atlas Retail India");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([getHealth(), getSamples()])
-      .then(([healthResponse, sampleOutputs]) => {
+    Promise.all([getHealth(), getSamples(), getInbox()])
+      .then(([healthResponse, sampleOutputs, inboxEmails]) => {
         setHealth(healthResponse.geminiConfigured ? "Ready" : "Gemini key missing");
         setSamples(sampleOutputs);
+        setInbox(inboxEmails);
+        setShipment(inboxEmails.find((email) => email.latestShipment)?.latestShipment ?? null);
       })
       .catch((caught: Error) => {
         setHealth("Backend unavailable");
         setError(caught.message);
       });
   }, []);
+
+  useEffect(() => {
+    setDraftReply(shipment?.decision?.draftReply ?? "");
+    setSelectedDiscrepancy(shipment?.crossDocumentResults.find((result) => result.result !== "match") ?? null);
+  }, [shipment]);
 
   const visibleSamples = useMemo(
     () =>
@@ -54,6 +81,14 @@ function App() {
     } finally {
       setBusy(null);
     }
+  }
+
+  async function handleProcessEmail(emailId: string) {
+    await runAction("Processing email", async () => {
+      const processedShipment = await processInboxEmail(emailId);
+      setShipment(processedShipment);
+      setInbox(await getInbox());
+    });
   }
 
   async function handleSample(samplePath: string) {
@@ -90,8 +125,8 @@ function App() {
     <main className="app-shell">
       <section className="topbar">
         <div>
-          <h1>Agentic Workflow</h1>
-          <p>Trade document extraction, validation, routing, storage, and query.</p>
+          <h1>CG Document Verification</h1>
+          <p>Supplier email intake, multi-document verification, amendment drafting, and stored-data query.</p>
         </div>
         <span className={`status-pill ${health === "Ready" ? "good" : "warn"}`}>{health}</span>
       </section>
@@ -99,28 +134,18 @@ function App() {
       {error && <div className="error-banner">{error}</div>}
       {busy && <div className="progress-banner">{busy}...</div>}
 
-      <section className="control-grid">
-        <div className="panel">
-          <h2>Run Samples</h2>
-          <div className="sample-list">
-            {visibleSamples.map((sample) => (
-              <button key={sample.pdf} onClick={() => handleSample(sample.pdf)} disabled={Boolean(busy)}>
-                {labelSample(sample.pdf)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <form className="panel" onSubmit={handleUpload}>
-          <h2>Upload Document</h2>
-          <input name="document" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" />
-          <button disabled={Boolean(busy)} type="submit">
-            Run Pipeline
-          </button>
-        </form>
+      <section className="workflow-grid">
+        <InboxPanel inbox={inbox} busy={Boolean(busy)} onProcess={handleProcessEmail} onSelect={setShipment} />
+        <ShipmentSummary shipment={shipment} />
       </section>
 
-      <RunView run={run} />
+      <ShipmentView
+        shipment={shipment}
+        draftReply={draftReply}
+        selectedDiscrepancy={selectedDiscrepancy}
+        onDraftChange={setDraftReply}
+        onSelectDiscrepancy={setSelectedDiscrepancy}
+      />
 
       <section className="panel query-panel">
         <h2>Query Stored Output</h2>
@@ -141,7 +166,289 @@ function App() {
           </div>
         )}
       </section>
+
+      <details className="part-one">
+        <summary>Part 1 single-document pipeline</summary>
+        <section className="control-grid">
+          <div className="panel">
+            <h2>Run Samples</h2>
+            <div className="sample-list">
+              {visibleSamples.map((sample) => (
+                <button key={sample.pdf} onClick={() => handleSample(sample.pdf)} disabled={Boolean(busy)}>
+                  {labelSample(sample.pdf)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <form className="panel" onSubmit={handleUpload}>
+            <h2>Upload Document</h2>
+            <input name="document" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" />
+            <button disabled={Boolean(busy)} type="submit">
+              Run Pipeline
+            </button>
+          </form>
+        </section>
+        <RunView run={run} />
+      </details>
     </main>
+  );
+}
+
+function InboxPanel({
+  inbox,
+  busy,
+  onProcess,
+  onSelect,
+}: {
+  inbox: InboxEmail[];
+  busy: boolean;
+  onProcess: (emailId: string) => void;
+  onSelect: (shipment: ShipmentVerification | null) => void;
+}) {
+  return (
+    <section className="panel">
+      <h2>Incoming SU Emails</h2>
+      <div className="inbox-list">
+        {inbox.map((email) => (
+          <article key={email.emailId} className="email-card">
+            <div className="email-head">
+              <div>
+                <strong>{email.subject}</strong>
+                <p>{email.from}</p>
+              </div>
+              <span className={`status-pill ${email.latestShipment ? "good" : "warn"}`}>
+                {email.latestShipment?.decision?.outcome ?? email.status}
+              </span>
+            </div>
+            <dl className="email-meta">
+              <div>
+                <dt>Customer</dt>
+                <dd>{email.customer}</dd>
+              </div>
+              <div>
+                <dt>Received</dt>
+                <dd>{formatDate(email.receivedAt)}</dd>
+              </div>
+              <div>
+                <dt>Attachments</dt>
+                <dd>{email.attachments.map((attachment) => attachment.fileName).join(", ")}</dd>
+              </div>
+            </dl>
+            <div className="email-actions">
+              <button disabled={busy} onClick={() => onProcess(email.emailId)}>
+                Process Email
+              </button>
+              <button disabled={!email.latestShipment} onClick={() => onSelect(email.latestShipment)}>
+                View Result
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ShipmentSummary({ shipment }: { shipment: ShipmentVerification | null }) {
+  const mismatches = shipment?.crossDocumentResults.filter((result) => result.result === "mismatch").length ?? 0;
+  const uncertain = shipment?.crossDocumentResults.filter((result) => result.result === "uncertain").length ?? 0;
+
+  return (
+    <section className="panel summary-panel">
+      <h2>Verification Summary</h2>
+      {!shipment ? (
+        <p>Select an incoming email and process it to see the CG decision.</p>
+      ) : (
+        <>
+          <p className={`outcome ${shipment.decision?.outcome ?? shipment.status}`}>
+            {formatOutcome(shipment.decision?.outcome ?? shipment.status)}
+          </p>
+          <dl>
+            <div>
+              <dt>Documents</dt>
+              <dd>{shipment.documents.length}</dd>
+            </div>
+            <div>
+              <dt>Mismatches</dt>
+              <dd>{mismatches}</dd>
+            </div>
+            <div>
+              <dt>Uncertain</dt>
+              <dd>{uncertain}</dd>
+            </div>
+            <div>
+              <dt>Reason</dt>
+              <dd>{shipment.decision?.reasoning ?? shipment.errorMessage ?? "-"}</dd>
+            </div>
+          </dl>
+        </>
+      )}
+    </section>
+  );
+}
+
+function ShipmentView({
+  shipment,
+  draftReply,
+  selectedDiscrepancy,
+  onDraftChange,
+  onSelectDiscrepancy,
+}: {
+  shipment: ShipmentVerification | null;
+  draftReply: string;
+  selectedDiscrepancy: CrossDocumentResult | null;
+  onDraftChange: (value: string) => void;
+  onSelectDiscrepancy: (result: CrossDocumentResult) => void;
+}) {
+  if (!shipment) {
+    return (
+      <section className="empty-state">
+        <h2>No shipment selected</h2>
+        <p>Process a simulated supplier email to view document results, cross-document checks, and a draft reply.</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="shipment-grid">
+      <DocumentResults documents={shipment.documents} />
+      <CrossDocumentTable results={shipment.crossDocumentResults} onSelect={onSelectDiscrepancy} />
+      <DiscrepancyDetail result={selectedDiscrepancy} />
+      <DraftReply draftReply={draftReply} onDraftChange={onDraftChange} />
+    </section>
+  );
+}
+
+function DocumentResults({ documents }: { documents: ShipmentVerification["documents"] }) {
+  return (
+    <section className="panel">
+      <h2>Document-Level Results</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Document</th>
+            <th>Type</th>
+            <th>Matches</th>
+            <th>Mismatches</th>
+            <th>Uncertain</th>
+          </tr>
+        </thead>
+        <tbody>
+          {documents.map((document) => (
+            <tr key={document.documentId}>
+              <td>{document.fileName}</td>
+              <td>{formatOutcome(document.documentType)}</td>
+              <td>{document.validation.counts.match}</td>
+              <td>{document.validation.counts.mismatch}</td>
+              <td>{document.validation.counts.uncertain}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+function CrossDocumentTable({
+  results,
+  onSelect,
+}: {
+  results: CrossDocumentResult[];
+  onSelect: (result: CrossDocumentResult) => void;
+}) {
+  return (
+    <section className="panel">
+      <h2>Cross-Document Checks</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Result</th>
+            <th>Values</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          {results.map((result) => (
+            <tr
+              key={result.fieldKey}
+              className={result.result !== "match" ? "clickable-row" : undefined}
+              onClick={() => onSelect(result)}
+            >
+              <td>{fieldLabels[result.fieldKey] ?? result.fieldKey}</td>
+              <td>
+                <span className={`result-badge ${result.result}`}>{result.result}</span>
+              </td>
+              <td>
+                {result.valuesByDocument.map((value) => (
+                  <div key={`${result.fieldKey}-${value.fileName}`}>
+                    {value.fileName}: {value.value ?? "-"}
+                  </div>
+                ))}
+              </td>
+              <td>{result.reason}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+function DiscrepancyDetail({ result }: { result: CrossDocumentResult | null }) {
+  return (
+    <section className="panel">
+      <h2>Discrepancy Detail</h2>
+      {!result ? (
+        <p>No flagged cross-document field selected.</p>
+      ) : (
+        <>
+          <p>
+            <strong>{fieldLabels[result.fieldKey] ?? result.fieldKey}</strong> is marked as{" "}
+            <span className={`result-badge ${result.result}`}>{result.result}</span>
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Document</th>
+                <th>Value</th>
+                <th>Confidence</th>
+                <th>Evidence</th>
+              </tr>
+            </thead>
+            <tbody>
+              {result.valuesByDocument.map((value) => (
+                <tr key={`${result.fieldKey}-detail-${value.fileName}`}>
+                  <td>{value.fileName}</td>
+                  <td>{value.value ?? "-"}</td>
+                  <td>{formatConfidence(value.confidence)}</td>
+                  <td>{value.evidence ?? "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+    </section>
+  );
+}
+
+function DraftReply({
+  draftReply,
+  onDraftChange,
+}: {
+  draftReply: string;
+  onDraftChange: (value: string) => void;
+}) {
+  return (
+    <section className="panel draft-panel">
+      <h2>Draft Reply</h2>
+      <textarea value={draftReply} onChange={(event) => onDraftChange(event.target.value)} />
+      <button type="button" onClick={() => void navigator.clipboard?.writeText(draftReply)}>
+        Copy Draft
+      </button>
+    </section>
   );
 }
 
@@ -275,6 +582,13 @@ function labelSample(path: string) {
 
 function formatConfidence(value: number) {
   return `${Math.round(value * 100)}%`;
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
 }
 
 function formatOutcome(outcome: string | null) {

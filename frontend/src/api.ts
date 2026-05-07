@@ -1,4 +1,4 @@
-import type { QueryResult, SampleOutput, StoredRun } from "./types";
+import type { InboxEmail, QueryResult, SampleOutput, ShipmentVerification, StoredRun } from "./types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000";
 
@@ -61,4 +61,22 @@ export async function askQuery(question: string) {
   });
 
   return data.result;
+}
+
+export async function getInbox() {
+  const data = await requestJson<{ ok: boolean; emails: InboxEmail[] }>("/api/inbox");
+  return data.emails;
+}
+
+export async function processInboxEmail(emailId: string) {
+  const data = await requestJson<{ ok: boolean; shipment: ShipmentVerification }>(`/api/inbox/${emailId}/process`, {
+    method: "POST",
+  });
+
+  return data.shipment;
+}
+
+export async function getShipment(shipmentId: string) {
+  const data = await requestJson<{ ok: boolean; shipment: ShipmentVerification }>(`/api/shipments/${shipmentId}`);
+  return data.shipment;
 }

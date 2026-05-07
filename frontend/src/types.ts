@@ -71,3 +71,65 @@ export type SampleOutput = {
   png: string;
   pdf: string;
 };
+
+export type SimulatedEmailAttachment = {
+  fileName: string;
+  samplePath: string;
+  documentType: string;
+};
+
+export type SimulatedEmail = {
+  emailId: string;
+  from: string;
+  subject: string;
+  receivedAt: string;
+  customer: string;
+  status: "incoming" | "processing" | "verified" | "failed";
+  attachments: SimulatedEmailAttachment[];
+};
+
+export type InboxEmail = SimulatedEmail & {
+  latestShipment: ShipmentVerification | null;
+};
+
+export type CrossDocumentValue = {
+  documentType: string;
+  fileName: string;
+  value: string | null;
+  confidence: number;
+  evidence: string | null;
+};
+
+export type CrossDocumentResult = {
+  fieldKey: string;
+  result: "match" | "mismatch" | "uncertain";
+  valuesByDocument: CrossDocumentValue[];
+  reason: string;
+};
+
+export type ShipmentDecision = {
+  outcome: "approved" | "needs_amendment" | "human_review";
+  reasoning: string;
+  draftReply: string;
+};
+
+export type ShipmentDocumentResult = {
+  documentId: string;
+  runId: string;
+  fileName: string;
+  documentType: string;
+  extraction: ExtractionResult;
+  validation: ValidationSummary;
+};
+
+export type ShipmentVerification = {
+  shipmentId: string;
+  email: SimulatedEmail;
+  status: "incoming" | "processing" | "verified" | "failed";
+  errorMessage: string | null;
+  documents: ShipmentDocumentResult[];
+  crossDocumentResults: CrossDocumentResult[];
+  decision: ShipmentDecision | null;
+  createdAt: string;
+  updatedAt: string;
+};
