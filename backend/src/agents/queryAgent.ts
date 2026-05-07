@@ -12,8 +12,8 @@ Tables and columns:
 runs
 - id: pipeline run id
 - status: processing, completed, or failed
-- outcome: auto_approve, human_review, or draft_amendment
-- source_type: sample or upload
+- outcome: auto_approve, human_review, or draft_amendment for single-document runs
+- source_type: sample, upload, or email
 - created_at: when the run was created
 - updated_at: when the run was last updated
 - error_message: failure reason when status is failed
@@ -61,15 +61,53 @@ query_history
 - query_type: query agent strategy, usually llm_sql
 - created_at: when question was asked
 
+shipments
+- id: shipment-level verification id
+- email_id: simulated inbox email id
+- status: processing, verified, or failed
+- customer: customer name
+- email_from: supplier email sender
+- email_subject: supplier email subject
+- email_received_at: when the simulated supplier email arrived
+- decision_outcome: approved, needs_amendment, or human_review
+- decision_reasoning: shipment-level router explanation
+- draft_reply: editable supplier reply draft; never sent automatically
+- error_message: failure reason when status is failed
+- created_at: when shipment processing started
+- updated_at: when shipment was last updated
+
+shipment_documents
+- id: shipment document link id
+- shipment_id: foreign key to shipments.id
+- run_id: foreign key to runs.id for the attachment-level pipeline run
+- document_type: commercial_invoice, bill_of_lading, packing_list, or unknown
+- file_name: attachment file name
+- sample_path: sample file path
+- created_at: when document link was stored
+
+cross_document_results
+- id: cross-document validation row id
+- shipment_id: foreign key to shipments.id
+- field_key: consignee_name, hs_code, port_of_loading, port_of_discharge, incoterms, gross_weight, invoice_number
+- result: match, mismatch, or uncertain
+- values_json: JSON array of document-specific values, confidence, and evidence
+- reason: deterministic cross-document validation explanation
+- created_at: when result row was stored
+
 Business definitions:
 - flagged shipment means runs.outcome is human_review or draft_amendment.
 - approved shipment means runs.outcome is auto_approve.
 - pending review means runs.outcome is human_review or draft_amendment.
+- Part 2 shipment email needs amendment means shipments.decision_outcome = 'needs_amendment'.
+- Part 2 shipment pending review means shipments.decision_outcome IN ('needs_amendment', 'human_review').
+- Part 2 approved shipment means shipments.decision_outcome = 'approved'.
 - this week can be answered as created_at >= datetime('now', '-7 days') for this POC.
 - shipment can be approximated as one pipeline run.
+- For Part 2 email workflows, shipment means one row in shipments.
 - document can be counted from documents.
 - for invoice-specific questions, use the latest run containing that invoice_number unless the user explicitly asks for all runs.
 - for discrepancy or mismatch questions, include validation_results.result IN ('mismatch', 'uncertain') because uncertain fields are also surfaced for review.
+- for cross-document mismatch questions, use cross_document_results.result IN ('mismatch', 'uncertain').
 `.trim();
 
 const sqlPlanResponseSchema = {
@@ -144,6 +182,7 @@ Rules:
 - Do not use INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, REPLACE, PRAGMA, ATTACH, DETACH, or multiple statements.
 - Add LIMIT 20 for row-listing queries. Aggregate count queries do not need LIMIT.
 - Prefer explicit joins through run_id.
+- For shipment email questions, prefer shipments joined to shipment_documents or cross_document_results through shipment_id.
 - For invoice-specific questions, identify the latest matching run with extracted_fields.field_key = 'invoice_number' and extracted_fields.value = ? before reading validation rows.
               `.trim(),
             },

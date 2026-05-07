@@ -7,6 +7,9 @@ const allowedTables = new Set([
   "validation_results",
   "decisions",
   "query_history",
+  "shipments",
+  "shipment_documents",
+  "cross_document_results",
 ]);
 
 const forbiddenSqlPattern =

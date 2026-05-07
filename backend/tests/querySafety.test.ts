@@ -44,6 +44,23 @@ test("validateSqlPlan rejects disallowed SQL", () => {
   );
 });
 
+test("validateSqlPlan allows shipment-level Part 2 tables", () => {
+  const plan = validateSqlPlan({
+    sql: `
+      SELECT s.id, s.customer, s.decision_outcome, c.field_key, c.result
+      FROM shipments s
+      JOIN cross_document_results c ON c.shipment_id = s.id
+      JOIN shipment_documents sd ON sd.shipment_id = s.id
+      WHERE s.customer = ?
+      ORDER BY s.created_at DESC
+    `,
+    params: ["Atlas Retail India Pvt Ltd"],
+    explanation: "List shipment verification results with cross-document mismatches.",
+  });
+
+  assert.match(plan.sql, /LIMIT 20$/);
+});
+
 test("createFallbackAnswer stays grounded in returned rows", () => {
   assert.equal(createFallbackAnswer([]), "No matching records were found.");
   assert.equal(createFallbackAnswer([{ count: 3 }]), "The query returned a count of 3.");
