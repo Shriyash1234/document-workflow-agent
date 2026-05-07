@@ -6,9 +6,11 @@ import { QueryAgent } from "./agents/queryAgent.js";
 import { loadCustomerRules } from "./rules/customerRules.js";
 import { runDocumentPipeline, runSamplePipeline } from "./services/pipelineService.js";
 import { loadSamplesManifest } from "./services/sampleDocuments.js";
+import { getSimulatedEmail, loadSimulatedInbox } from "./services/simulatedInbox.js";
 import { uploadedFileToPipelineDocument, uploadDocument } from "./services/uploads.js";
 import { getDatabaseStatus } from "./storage/database.js";
 import { getRun } from "./storage/runRepository.js";
+import { getLatestShipmentForEmail, getShipment } from "./storage/shipmentRepository.js";
 
 dotenv.config();
 
@@ -52,6 +54,37 @@ app.get("/api/rules/customer", async (_request: Request, response: Response, nex
     response.json({
       ok: true,
       rules,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/api/inbox", async (_request: Request, response: Response, next: NextFunction) => {
+  try {
+    const emails = await loadSimulatedInbox();
+
+    response.json({
+      ok: true,
+      emails: emails.map((email) => ({
+        ...email,
+        latestShipment: getLatestShipmentForEmail(email.emailId),
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/inbox/:emailId/process", async (request: Request, response: Response, next: NextFunction) => {
+  try {
+    const emailId = Array.isArray(request.params.emailId) ? request.params.emailId[0] : request.params.emailId;
+    const email = await getSimulatedEmail(emailId);
+
+    response.status(501).json({
+      ok: false,
+      email,
+      error: "Shipment processing is not implemented yet. The route is ready for the Step 5 pipeline.",
     });
   } catch (error) {
     next(error);
@@ -115,6 +148,23 @@ app.get("/api/runs/:id", (request: Request, response: Response) => {
   response.json({
     ok: true,
     run,
+  });
+});
+
+app.get("/api/shipments/:id", (request: Request, response: Response) => {
+  const shipmentId = Array.isArray(request.params.id) ? request.params.id[0] : request.params.id;
+  const shipment = getShipment(shipmentId);
+  if (!shipment) {
+    response.status(404).json({
+      ok: false,
+      error: "Shipment not found",
+    });
+    return;
+  }
+
+  response.json({
+    ok: true,
+    shipment,
   });
 });
 
