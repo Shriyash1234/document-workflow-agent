@@ -280,7 +280,23 @@ function CrossDocumentIssueTable({
   selectedFieldKey: string | null;
   onSelect: (fieldKey: string) => void;
 }) {
-  const sortedResults = [...results].sort((a, b) => severityRank(a.result) - severityRank(b.result));
+  const [filter, setFilter] = useState<"issues" | "mismatch" | "uncertain" | "match">("issues");
+  const counts = {
+    issues: results.filter((result) => result.result !== "match").length,
+    mismatch: results.filter((result) => result.result === "mismatch").length,
+    uncertain: results.filter((result) => result.result === "uncertain").length,
+    match: results.filter((result) => result.result === "match").length,
+  };
+  const visibleResults = results
+    .filter((result) => {
+      if (filter === "issues") return result.result !== "match";
+      return result.result === filter;
+    })
+    .sort((a, b) => severityRank(a.result) - severityRank(b.result));
+
+  useEffect(() => {
+    setFilter("issues");
+  }, [results]);
 
   return (
     <section className="issue-table-panel">
@@ -288,37 +304,52 @@ function CrossDocumentIssueTable({
         <p className="eyebrow">Cross-document validation</p>
         <h2>Discrepancies & Evidence</h2>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Field</th>
-            <th>Status</th>
-            <th>Document Values</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sortedResults.map((result) => (
-            <tr
+      <div className="issue-toolbar" aria-label="Cross-document result filters">
+        <button type="button" className={filter === "issues" ? "active" : ""} onClick={() => setFilter("issues")}>
+          Issues <span>{counts.issues}</span>
+        </button>
+        <button type="button" className={filter === "mismatch" ? "active" : ""} onClick={() => setFilter("mismatch")}>
+          Mismatch <span>{counts.mismatch}</span>
+        </button>
+        <button type="button" className={filter === "uncertain" ? "active" : ""} onClick={() => setFilter("uncertain")}>
+          Uncertain <span>{counts.uncertain}</span>
+        </button>
+        <button type="button" className={filter === "match" ? "active" : ""} onClick={() => setFilter("match")}>
+          Matched <span>{counts.match}</span>
+        </button>
+      </div>
+
+      {visibleResults.length === 0 ? (
+        <div className="issue-empty">No fields in this filter.</div>
+      ) : (
+        <div className="issue-card-list">
+          {visibleResults.map((result) => (
+            <button
               key={result.fieldKey}
-              className={result.fieldKey === selectedFieldKey ? "selected-row" : ""}
-              onClick={() => onSelect(result.fieldKey)}
+              type="button"
+              className={`issue-card ${result.result} ${result.fieldKey === selectedFieldKey ? "selected" : ""}`}
+              onClick={() => {
+                if (result.result !== "match") onSelect(result.fieldKey);
+              }}
             >
-              <td>{fieldLabels[result.fieldKey] ?? result.fieldKey}</td>
-              <td>
+              <span className="issue-card-head">
+                <strong>{fieldLabels[result.fieldKey] ?? result.fieldKey}</strong>
                 <span className={`result-badge ${result.result}`}>{result.result}</span>
-              </td>
-              <td>
+              </span>
+              <span className="issue-reason">{result.reason}</span>
+              <span className="document-value-grid">
                 {result.valuesByDocument.map((value) => (
-                  <div key={`${result.fieldKey}-${value.fileName}`} className="value-line">
+                  <span key={`${result.fieldKey}-${value.fileName}`} className="document-value-cell">
                     <strong>{formatDocumentType(value.documentType)}</strong>
                     <span>{value.value ?? "missing / unreadable"}</span>
-                  </div>
+                    <small>{formatConfidence(value.confidence)}</small>
+                  </span>
                 ))}
-              </td>
-            </tr>
+              </span>
+            </button>
           ))}
-        </tbody>
-      </table>
+        </div>
+      )}
     </section>
   );
 }

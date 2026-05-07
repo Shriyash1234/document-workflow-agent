@@ -466,29 +466,132 @@ dd {
   color: #667583;
 }
 
-.issue-table-panel table {
-  font-size: 14px;
+.issue-toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
 }
 
-.issue-table-panel tr {
-  cursor: pointer;
+.issue-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  border-color: #c6d2dd;
+  background: #f6f9fb;
+  color: #233342;
+  padding: 6px 10px;
 }
 
-.issue-table-panel tbody tr:hover,
-.issue-table-panel .selected-row {
+.issue-toolbar button.active {
+  border-color: #2d6fa3;
+  background: #e7f2fb;
+  color: #19577f;
+}
+
+.issue-toolbar span {
+  display: inline-grid;
+  min-width: 22px;
+  min-height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  background: #fff;
+  color: #52616f;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.issue-card-list {
+  display: grid;
+  gap: 10px;
+}
+
+.issue-card {
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+  border-color: #d7e0e8;
+  background: #f8fafc;
+  color: #17212b;
+  padding: 12px;
+  text-align: left;
+}
+
+.issue-card.mismatch {
+  border-left: 4px solid #d44b3e;
+}
+
+.issue-card.uncertain {
+  border-left: 4px solid #d99016;
+}
+
+.issue-card.match {
+  border-left: 4px solid #1f9d5a;
+  cursor: default;
+}
+
+.issue-card.selected,
+.issue-card:hover:not(.match) {
+  border-color: #2d6fa3;
   background: #f1f7fc;
 }
 
-.value-line {
-  display: grid;
-  grid-template-columns: 130px minmax(0, 1fr);
-  gap: 8px;
-  margin-bottom: 4px;
+.issue-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.value-line strong {
+.issue-card-head strong {
+  font-size: 16px;
+}
+
+.issue-reason {
+  color: #52616f;
+}
+
+.document-value-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.document-value-cell {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-width: 0;
+  border: 1px solid #dde6ee;
+  border-radius: 6px;
+  background: #fff;
+  padding: 9px;
+}
+
+.document-value-cell strong {
   color: #52616f;
   font-size: 12px;
+  text-transform: uppercase;
+}
+
+.document-value-cell span {
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.document-value-cell small {
+  color: #667583;
+  font-weight: 700;
+}
+
+.issue-empty {
+  display: grid;
+  min-height: 96px;
+  place-items: center;
+  border: 1px dashed #b9c6d1;
+  border-radius: 6px;
+  color: #667583;
 }
 
 .detail-summary {
