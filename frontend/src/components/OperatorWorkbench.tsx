@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle,
   CheckCircle2,
   ClipboardCheck,
   Copy,
@@ -51,20 +50,13 @@ export function OperatorWorkbench({
   onProcessEmail: (email: InboxEmail) => void;
   onDraftChange: (value: string) => void;
 }) {
-  const flaggedResults = shipment?.crossDocumentResults.filter((result) => result.result !== "match") ?? [];
-  const [selectedIssueKey, setSelectedIssueKey] = useState<string | null>(flaggedResults[0]?.fieldKey ?? null);
   const attachments = useMemo(() => buildAttachmentViews(selectedEmail, shipment), [selectedEmail, shipment]);
   const [selectedAttachmentKey, setSelectedAttachmentKey] = useState<string | null>(attachments[0]?.key ?? null);
-
-  useEffect(() => {
-    setSelectedIssueKey(flaggedResults[0]?.fieldKey ?? null);
-  }, [shipment?.shipmentId]);
 
   useEffect(() => {
     setSelectedAttachmentKey(attachments[0]?.key ?? null);
   }, [selectedEmail?.emailId, shipment?.shipmentId]);
 
-  const selectedIssue = flaggedResults.find((result) => result.fieldKey === selectedIssueKey) ?? flaggedResults[0] ?? null;
   const selectedAttachment =
     attachments.find((attachment) => attachment.key === selectedAttachmentKey) ?? attachments[0] ?? null;
 
@@ -87,14 +79,9 @@ export function OperatorWorkbench({
             onSelect={setSelectedAttachmentKey}
           />
           <DocumentPreviewPane attachment={selectedAttachment} />
-          <CrossDocumentIssueTable
-            results={shipment?.crossDocumentResults ?? []}
-            selectedFieldKey={selectedIssue?.fieldKey ?? null}
-            onSelect={setSelectedIssueKey}
-          />
+          <CrossDocumentIssueTable results={shipment?.crossDocumentResults ?? []} />
         </section>
         <section className="decision-column">
-          <DiscrepancyDetailPanel result={selectedIssue} />
           <DraftReplyPanel draftReply={draftReply} shipment={shipment} onDraftChange={onDraftChange} />
         </section>
       </section>
@@ -271,15 +258,7 @@ function DocumentPreviewPane({ attachment }: { attachment: AttachmentView | null
   );
 }
 
-function CrossDocumentIssueTable({
-  results,
-  selectedFieldKey,
-  onSelect,
-}: {
-  results: CrossDocumentResult[];
-  selectedFieldKey: string | null;
-  onSelect: (fieldKey: string) => void;
-}) {
+function CrossDocumentIssueTable({ results }: { results: CrossDocumentResult[] }) {
   const [filter, setFilter] = useState<"issues" | "mismatch" | "uncertain" | "match">("issues");
   const counts = {
     issues: results.filter((result) => result.result !== "match").length,
@@ -324,13 +303,9 @@ function CrossDocumentIssueTable({
       ) : (
         <div className="issue-card-list">
           {visibleResults.map((result) => (
-            <button
+            <article
               key={result.fieldKey}
-              type="button"
-              className={`issue-card ${result.result} ${result.fieldKey === selectedFieldKey ? "selected" : ""}`}
-              onClick={() => {
-                if (result.result !== "match") onSelect(result.fieldKey);
-              }}
+              className={`issue-card ${result.result}`}
             >
               <span className="issue-card-head">
                 <strong>{fieldLabels[result.fieldKey] ?? result.fieldKey}</strong>
@@ -343,48 +318,13 @@ function CrossDocumentIssueTable({
                     <strong>{formatDocumentType(value.documentType)}</strong>
                     <span>{value.value ?? "missing / unreadable"}</span>
                     <small>{formatConfidence(value.confidence)}</small>
+                    <em>{value.evidence ?? "No evidence snippet returned."}</em>
                   </span>
                 ))}
               </span>
-            </button>
+            </article>
           ))}
         </div>
-      )}
-    </section>
-  );
-}
-
-function DiscrepancyDetailPanel({ result }: { result: CrossDocumentResult | null }) {
-  return (
-    <section className="detail-panel">
-      <div className="section-heading compact">
-        <p className="eyebrow">Selected Issue</p>
-        <h2>
-          <AlertTriangle size={18} /> Discrepancy Detail
-        </h2>
-      </div>
-      {!result ? (
-        <p className="muted">No mismatch or uncertain field selected.</p>
-      ) : (
-        <>
-          <div className="detail-summary">
-            <span className={`result-badge ${result.result}`}>{result.result}</span>
-            <strong>{fieldLabels[result.fieldKey] ?? result.fieldKey}</strong>
-            <p>{result.reason}</p>
-          </div>
-          <div className="evidence-list">
-            {result.valuesByDocument.map((value) => (
-              <article key={`${result.fieldKey}-detail-${value.fileName}`}>
-                <div>
-                  <strong>{formatDocumentType(value.documentType)}</strong>
-                  <span>{formatConfidence(value.confidence)}</span>
-                </div>
-                <p className="found-value">{value.value ?? "missing / unreadable"}</p>
-                <p className="evidence">{value.evidence ?? "No evidence snippet returned."}</p>
-              </article>
-            ))}
-          </div>
-        </>
       )}
     </section>
   );
