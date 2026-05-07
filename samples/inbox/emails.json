@@ -1,0 +1,54 @@
+{
+  "emails": [
+    {
+      "emailId": "clean-shipment",
+      "from": "shipping.unit@shenzhen-tech.example",
+      "subject": "Shipment documents for Atlas Retail - INV-2026-0417",
+      "receivedAt": "2026-04-17T09:30:00.000Z",
+      "customer": "Atlas Retail India Pvt Ltd",
+      "status": "incoming",
+      "attachments": [
+        {
+          "fileName": "commercial-invoice.pdf",
+          "samplePath": "clean/commercial-invoice.pdf",
+          "documentType": "commercial_invoice"
+        },
+        {
+          "fileName": "bill-of-lading.pdf",
+          "samplePath": "clean/bill-of-lading.pdf",
+          "documentType": "bill_of_lading"
+        },
+        {
+          "fileName": "packing-list.pdf",
+          "samplePath": "clean/packing-list.pdf",
+          "documentType": "packing_list"
+        }
+      ]
+    },
+    {
+      "emailId": "messy-shipment",
+      "from": "shipping.unit@shenzhen-tech.example",
+      "subject": "Revised shipment documents for Atlas Retail - INV-2026-0418",
+      "receivedAt": "2026-04-18T11:10:00.000Z",
+      "customer": "Atlas Retail India Pvt Ltd",
+      "status": "incoming",
+      "attachments": [
+        {
+          "fileName": "commercial-invoice-messy.pdf",
+          "samplePath": "messy/commercial-invoice-messy.pdf",
+          "documentType": "commercial_invoice"
+        },
+        {
+          "fileName": "bill-of-lading-messy.pdf",
+          "samplePath": "messy/bill-of-lading-messy.pdf",
+          "documentType": "bill_of_lading"
+        },
+        {
+          "fileName": "packing-list-messy.pdf",
+          "samplePath": "messy/packing-list-messy.pdf",
+          "documentType": "packing_list"
+        }
+      ]
+    }
+  ]
+}
